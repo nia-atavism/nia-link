@@ -1,0 +1,55 @@
+# ============================================
+# Nia-Link Smithery Official Configuration
+# The Universal WebMCP Polyfill for the Hostile Web
+# ============================================
+
+version: "1"
+servers:
+  nia-link:
+    # 專案定位與感知神經描述，這將顯示在 Smithery.ai 註冊表的前台
+    description: "The Universal WebMCP Polyfill for the Hostile Web. Equipped with Playwright Ghost Hand for anti-scraping bypass and OpenCV-powered UI template matching."
+    version: "0.9.0"
+    
+    # 定義這是一個基於 Docker 容器運行的 MCP 伺服器
+    startCommand:
+      type: "docker"
+      
+    # 指示 Smithery CLI 讀取目錄下的 Dockerfile 進行自動建置
+    build:
+      dockerfile: "Dockerfile"
+      context: "."
+      
+    # 針對 Playwright 的無頭瀏覽器與 FastAPI SSE 伺服器的啟動參數
+    # 加入 --ipc=host 確保 Chromium 渲染時不會因為共享記憶體不足而崩潰
+    dockerRunArgs:
+      - "--ipc=host"
+      - "-p"
+      - "8000:8000"
+      
+    # 定義啟動此 MCP 伺服器所需的環境變數設定
+    config:
+      env:
+        # FastAPI / Uvicorn 運行環境設定
+        HOST:
+          type: "string"
+          description: "FastAPI server host address"
+          default: "0.0.0.0"
+        PORT:
+          type: "number"
+          description: "FastAPI server port (SSE endpoint)"
+          default: 8000
+        # 混合動力引擎與 Ghost Hand 的環境變數
+        PLAYWRIGHT_TIMEOUT:
+          type: "number"
+          description: "Global timeout for Playwright browser actions (in milliseconds)"
+          default: 30000
+        DEBUG:
+          type: "string"
+          description: "Enable Playwright API debug logs (set to 'pw:api' to enable)"
+          default: ""
+          required: false
+        # （可選）如果未來 WebMCP 嗅探需要繞過特定防爬蟲牆的代理伺服器
+        HTTP_PROXY:
+          type: "string"
+          description: "Proxy URL for standardizing Hostile Web requests"
+          required: false

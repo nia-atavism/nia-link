@@ -1,0 +1,40 @@
+# Nia-Link Dependencies
+# AI Agent Web Neuro-Link Engine v0.9
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Web Scraping
+crawl4ai>=0.2.0
+
+# Browser Automation
+playwright>=1.40.0
+
+# HTML Processing
+html2text>=2024.2.26
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Async Support
+httpx>=0.26.0
+
+# MCP (Model Context Protocol)
+mcp[cli]>=1.0.0
+
+# SSE Support for MCP
+sse-starlette>=2.0.0
+
+# Math (for Bézier curves)
+numpy>=1.24.0
+
+# Testing
+pytest>=8.0.0
+
