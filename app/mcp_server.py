@@ -412,93 +412,130 @@ session_manager = StreamableHTTPSessionManager(
 )
 
 import logging as _logging
+from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response as StarletteResponse, JSONResponse as StarletteJSONResponse
 
 _mcp_logger = _logging.getLogger("nia-link.mcp")
 
 
-async def handle_streamable_http(request):
-    """Streamable HTTP endpoint — handles JSON-RPC over HTTP.
-    
-    防彈級：確保所有路徑都回傳一個有效的 Response，
-    避免 'NoneType' object is not callable 幽靈 bug。
-    """
-    # 1. 處理 OPTIONS 預檢請求
-    if request.method == "OPTIONS":
-        return StarletteResponse(status_code=200)
+# ============================================================
+# Raw ASGI Handlers
+# ============================================================
+# MCP SDK 的各個 handler (connect_sse, handle_post_message,
+# session_manager.handle_request) 都直接透過 ASGI send() 寫出回應。
+# 如果用 Starlette 的 endpoint= 模式，Starlette 會再呼叫
+# return_value(scope, receive, send) → 雙重回應 → RuntimeError。
+# 
+# 解法：用 class __call__(scope, receive, send) 讓 Starlette
+# 把它當作 raw ASGI app，不做 request_response 包裝。
+# ============================================================
 
-    # 2. 嘗試正常 Streamable HTTP 處理
-    try:
-        response = await session_manager.handle_request(
-            request.scope, request.receive, request._send
-        )
-        # 如果底層處理器直接透過 ASGI send 回應（回傳 None），
-        # 我們不需要再回傳 Response — 但安全起見加上防護
-        if response is not None:
-            return response
-        # handle_request 直接寫入了 ASGI 回應，無需額外回傳
-        return StarletteResponse(status_code=200)
-    except Exception as e:
-        _mcp_logger.error(f"Streamable HTTP handler error: {e}", exc_info=True)
-        return StarletteJSONResponse(
-            content={"error": "mcp_handler_error", "detail": str(e)},
-            status_code=500,
-        )
+
+class StreamableHTTPHandler:
+    """Streamable HTTP — handles JSON-RPC over HTTP for Smithery."""
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return
+        
+        request = StarletteRequest(scope, receive, send)
+        
+        if request.method == "OPTIONS":
+            response = StarletteResponse(status_code=200)
+            await response(scope, receive, send)
+            return
+        
+        try:
+            await session_manager.handle_request(scope, receive, send)
+        except Exception as e:
+            _mcp_logger.error(f"Streamable HTTP error: {e}", exc_info=True)
+            response = StarletteJSONResponse(
+                content={"error": "mcp_handler_error", "detail": str(e)},
+                status_code=500,
+            )
+            await response(scope, receive, send)
 
 
 # 2. Legacy SSE Transport (backward compatibility with Claude Desktop)
 # NOTE: app.mount("/mcp", ...) 讓 scope["root_path"] = "/mcp"
 #       MCP SDK 的 connect_sse 會自動拼接: root_path + endpoint
 #       → "/mcp" + "/messages/" = "/mcp/messages/" ✅
-#       所以這裡只需要填「子應用內部的相對路徑」
 sse = SseServerTransport("/messages/")
-_mcp_logger.info("[DEPLOY CHECK v5] SseServerTransport endpoint = /messages/")
+_mcp_logger.info("[DEPLOY CHECK v6] SseServerTransport endpoint = /messages/, raw ASGI mode")
 
 
-async def handle_sse_get(request):
-    """SSE GET — 建立 SSE 串流連線 (Claude Desktop / legacy clients)."""
-    try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
-            await app.run(read_stream, write_stream, app.create_initialization_options())
-        return StarletteResponse(status_code=200)
-    except Exception as e:
-        _mcp_logger.error(f"SSE handler error: {e}", exc_info=True)
-        return StarletteJSONResponse(
-            content={"error": "sse_connection_error", "detail": str(e)},
-            status_code=500,
-        )
-
-
-async def handle_sse_messages(request):
-    """SSE POST — 接收客戶端 JSON-RPC 訊息."""
-    try:
-        await sse.handle_post_message(request.scope, request.receive, request._send)
-        return StarletteResponse(status_code=200)
-    except Exception as e:
-        _mcp_logger.error(f"SSE message handler error: {e}", exc_info=True)
-        return StarletteJSONResponse(
-            content={"error": "sse_message_error", "detail": str(e)},
-            status_code=500,
-        )
-
-
-async def handle_sse_or_post(request):
+class SSEHandler:
     """統一 SSE 端點 — 同時支援 GET (串流) 與 POST (訊息)。
     
-    Smithery 採用「單一端點架構」，會直接對 /sse 發送 POST。
-    Claude Desktop 則用傳統 GET 建立串流。此函數統一分派。
+    Smithery 採用「單一端點架構」，直接對 /sse 發送 POST。
+    Claude Desktop 用傳統 GET 建立串流。此 handler 統一分派。
+    使用 raw ASGI 避免 Starlette 的 request_response 雙重回應。
     """
-    if request.method == "OPTIONS":
-        return StarletteResponse(status_code=200)
-    if request.method == "POST":
-        return await handle_sse_messages(request)
-    if request.method == "GET":
-        return await handle_sse_get(request)
-    # 安全墊片
-    return StarletteJSONResponse(
-        content={"detail": "Method not supported on /sse"},
-        status_code=405,
-    )
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return
+        
+        method = scope.get("method", "GET")
+        
+        if method == "OPTIONS":
+            response = StarletteResponse(status_code=200)
+            await response(scope, receive, send)
+            return
+        
+        if method == "POST":
+            # Smithery 單端點模式：POST 到 /sse
+            try:
+                await sse.handle_post_message(scope, receive, send)
+            except Exception as e:
+                _mcp_logger.error(f"SSE POST error: {e}", exc_info=True)
+                response = StarletteJSONResponse(
+                    content={"error": "sse_message_error", "detail": str(e)},
+                    status_code=500,
+                )
+                await response(scope, receive, send)
+            return
+        
+        if method == "GET":
+            # 傳統 SSE 串流
+            try:
+                async with sse.connect_sse(scope, receive, send) as (read_stream, write_stream):
+                    await app.run(read_stream, write_stream, app.create_initialization_options())
+            except Exception as e:
+                _mcp_logger.error(f"SSE GET error: {e}", exc_info=True)
+            return
+        
+        # 安全墊片
+        response = StarletteJSONResponse(
+            content={"detail": "Method not supported on /sse"},
+            status_code=405,
+        )
+        await response(scope, receive, send)
+
+
+class SSEMessageHandler:
+    """處理 /messages 的 POST 訊息 (legacy endpoint)。"""
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return
+        
+        method = scope.get("method", "POST")
+        
+        if method == "OPTIONS":
+            response = StarletteResponse(status_code=200)
+            await response(scope, receive, send)
+            return
+        
+        try:
+            await sse.handle_post_message(scope, receive, send)
+        except Exception as e:
+            _mcp_logger.error(f"SSE message error: {e}", exc_info=True)
+            response = StarletteJSONResponse(
+                content={"error": "sse_message_error", "detail": str(e)},
+                status_code=500,
+            )
+            await response(scope, receive, send)
 
 
 # Build a Starlette sub-app with its own CORS middleware
@@ -510,12 +547,12 @@ from starlette.middleware.cors import CORSMiddleware as StarletteCORS
 mcp_starlette_app = Starlette(
     routes=[
         # Streamable HTTP (Smithery primary transport)
-        Route("/", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE", "OPTIONS"]),
-        # 關鍵修復：/sse 同時接管 GET (串流) 與 POST (Smithery 單端點訊息)
-        Route("/sse", endpoint=handle_sse_or_post, methods=["GET", "POST", "OPTIONS"]),
+        Route("/", endpoint=StreamableHTTPHandler(), methods=["GET", "POST", "DELETE", "OPTIONS"]),
+        # 關鍵：/sse 同時接管 GET (串流) 與 POST (Smithery 單端點)
+        Route("/sse", endpoint=SSEHandler(), methods=["GET", "POST", "OPTIONS"]),
         # Legacy message endpoints
-        Route("/messages", endpoint=handle_sse_messages, methods=["POST", "OPTIONS"]),
-        Route("/messages/", endpoint=handle_sse_messages, methods=["POST", "OPTIONS"]),
+        Route("/messages", endpoint=SSEMessageHandler(), methods=["POST", "OPTIONS"]),
+        Route("/messages/", endpoint=SSEMessageHandler(), methods=["POST", "OPTIONS"]),
     ],
     middleware=[
         Middleware(
