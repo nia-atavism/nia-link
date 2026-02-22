@@ -380,7 +380,7 @@ async def scrape_url(
 @app.post(
     "/v1/interact",
     response_model=InteractResponse,
-    tags=["v0.8 Synaptic Bridge"],
+    tags=["v0.9 Synaptic Bridge"],
     summary="擬人化網頁交互 (v0.8)",
     description="""
 ## 突觸橋接交互介面 - v0.8
@@ -432,7 +432,7 @@ async def interact_url(
 @app.post(
     "/v1/workflow",
     response_model=WorkflowResponse,
-    tags=["v0.8 Workflow"],
+    tags=["v0.9 Workflow"],
     summary="多頁面工作流 (v0.8)",
     description="""
 ## 多頁面工作流 - v0.8
@@ -474,7 +474,7 @@ async def run_workflow(
 @app.post(
     "/v1/diff",
     response_model=DiffResponse,
-    tags=["v0.8 Diff"],
+    tags=["v0.9 Diff"],
     summary="Website change detection",
     description="""
 ## Website Change Detection - v0.8
@@ -541,7 +541,7 @@ _task_queue = TaskQueue()
 @app.post(
     "/v1/queue/submit",
     response_model=QueueSubmitResponse,
-    tags=["v0.8 Queue"],
+    tags=["v0.9 Queue"],
     summary="Submit async scrape task",
     description="Submit a scraping task to the background queue. Returns a task_id for polling."
 )
@@ -574,7 +574,7 @@ async def queue_submit(
 @app.get(
     "/v1/queue/{task_id}",
     response_model=QueueStatusResponse,
-    tags=["v0.8 Queue"],
+    tags=["v0.9 Queue"],
     summary="Get task status/result",
     description="Poll for the status and result of a previously submitted async task."
 )
