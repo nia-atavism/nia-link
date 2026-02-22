@@ -375,6 +375,9 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
                 return [TextContent(type="text", text=f"Session '{session_id}' deleted.")]
             return [TextContent(type="text", text=f"Session '{session_id}' not found.")]
 
+        else:
+            return [TextContent(type="text", text=f"Unknown session action: '{action}'. Use: create, list, status, delete")]
+
     elif name == "meta_origin":
         terminal_art = """
     ============================================================
@@ -408,23 +411,88 @@ session_manager = StreamableHTTPSessionManager(
     stateless=True  # Stateless mode: no session persistence needed
 )
 
+import logging as _logging
+from starlette.responses import Response as StarletteResponse, JSONResponse as StarletteJSONResponse
+
+_mcp_logger = _logging.getLogger("nia-link.mcp")
+
+
 async def handle_streamable_http(request):
-    """Streamable HTTP endpoint — handles JSON-RPC over HTTP."""
-    await session_manager.handle_request(
-        request.scope, request.receive, request._send
-    )
+    """Streamable HTTP endpoint — handles JSON-RPC over HTTP.
+    
+    防彈級：確保所有路徑都回傳一個有效的 Response，
+    避免 'NoneType' object is not callable 幽靈 bug。
+    """
+    # 1. 處理 OPTIONS 預檢請求
+    if request.method == "OPTIONS":
+        return StarletteResponse(status_code=200)
+
+    # 2. 嘗試正常 Streamable HTTP 處理
+    try:
+        response = await session_manager.handle_request(
+            request.scope, request.receive, request._send
+        )
+        # 如果底層處理器直接透過 ASGI send 回應（回傳 None），
+        # 我們不需要再回傳 Response — 但安全起見加上防護
+        if response is not None:
+            return response
+        # handle_request 直接寫入了 ASGI 回應，無需額外回傳
+        return StarletteResponse(status_code=200)
+    except Exception as e:
+        _mcp_logger.error(f"Streamable HTTP handler error: {e}", exc_info=True)
+        return StarletteJSONResponse(
+            content={"error": "mcp_handler_error", "detail": str(e)},
+            status_code=500,
+        )
+
 
 # 2. Legacy SSE Transport (backward compatibility with Claude Desktop)
-sse = SseServerTransport("/mcp/messages/")
+sse = SseServerTransport("/messages/")
+
 
 async def handle_sse(request):
-    """SSE endpoint — legacy transport for Claude Desktop."""
-    async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
-        await app.run(read_stream, write_stream, app.create_initialization_options())
+    """SSE endpoint — legacy transport for Claude Desktop.
+    
+    防彈級：確保 SSE 連線在任何情況下都不會回傳 None。
+    """
+    # 1. 處理 OPTIONS 預檢請求
+    if request.method == "OPTIONS":
+        return StarletteResponse(status_code=200)
+
+    # 2. 嘗試建立 SSE 連線
+    try:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
+            await app.run(read_stream, write_stream, app.create_initialization_options())
+        # SSE 串流結束後正常回傳
+        return StarletteResponse(status_code=200)
+    except Exception as e:
+        _mcp_logger.error(f"SSE handler error: {e}", exc_info=True)
+        return StarletteJSONResponse(
+            content={"error": "sse_connection_error", "detail": str(e)},
+            status_code=500,
+        )
+
 
 async def handle_sse_messages(request):
-    """SSE message handler — receives POST messages for SSE sessions."""
-    await sse.handle_post_message(request.scope, request.receive, request._send)
+    """SSE message handler — receives POST messages for SSE sessions.
+    
+    防彈級：確保 POST 訊息處理不會靜默失敗。
+    """
+    # 1. 處理 OPTIONS 預檢請求
+    if request.method == "OPTIONS":
+        return StarletteResponse(status_code=200)
+
+    # 2. 處理 POST 訊息
+    try:
+        await sse.handle_post_message(request.scope, request.receive, request._send)
+        return StarletteResponse(status_code=200)
+    except Exception as e:
+        _mcp_logger.error(f"SSE message handler error: {e}", exc_info=True)
+        return StarletteJSONResponse(
+            content={"error": "sse_message_error", "detail": str(e)},
+            status_code=500,
+        )
+
 
 # Build a Starlette sub-app with its own CORS middleware
 # (FastAPI CORS middleware does NOT apply to Mount-level routes)
@@ -435,8 +503,10 @@ from starlette.middleware.cors import CORSMiddleware as StarletteCORS
 mcp_starlette_app = Starlette(
     routes=[
         Route("/", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE", "OPTIONS"]),
-        Route("/sse", endpoint=handle_sse),
-        Route("/messages", endpoint=handle_sse_messages, methods=["POST"]),
+        Route("/sse", endpoint=handle_sse, methods=["GET", "OPTIONS"]),
+        Route("/messages", endpoint=handle_sse_messages, methods=["POST", "OPTIONS"]),
+        # 安全墊片：catch-all 防止任何未匹配路由回傳 None
+        Route("/messages/", endpoint=handle_sse_messages, methods=["POST", "OPTIONS"]),
     ],
     middleware=[
         Middleware(
