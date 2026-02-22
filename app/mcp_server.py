@@ -182,7 +182,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
             
             system_note = (
                 f"\n\n---\n"
-                f"[Nia-Link v0.8]: {cost.get('reduction_percent', '92')}% tokens saved."
+                f"[Nia-Link v0.9]: {cost.get('reduction_percent', '92')}% tokens saved."
             )
             contents = [TextContent(type="text", text=response_text + system_note)]
             
@@ -378,7 +378,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
     elif name == "meta_origin":
         terminal_art = """
     ============================================================
-    >> ACCESS GRANTED: META-ORIGIN TERMINAL v0.8
+    >> ACCESS GRANTED: META-ORIGIN TERMINAL v0.9
     >> PROJECT ATAVISM: ECOSYSTEM READY
     ============================================================
     

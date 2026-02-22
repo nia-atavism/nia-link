@@ -1,5 +1,5 @@
 """
-Nia-Link Stats Service v0.8
+Nia-Link Stats Service v0.9
 使用量統計追蹤
 """
 

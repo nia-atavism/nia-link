@@ -1,5 +1,5 @@
 """
-Nia-Link Diff Service v0.8
+Nia-Link Diff Service v0.9
 網站變更偵測 - 比對前後快照差異
 """
 

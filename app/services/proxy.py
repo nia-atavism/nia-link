@@ -1,5 +1,5 @@
 """
-Nia-Link Proxy Pool v0.8
+Nia-Link Proxy Pool v0.9
 代理池管理 - 支援多代理輪換（round_robin / random）
 """
 

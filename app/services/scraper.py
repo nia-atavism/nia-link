@@ -1,5 +1,5 @@
 """
-Nia-Link Scraper Service v0.8
+Nia-Link Scraper Service v0.9
 網頁爬蟲核心服務 - 混合引擎 (Hybrid Engine)
 """
 
@@ -166,7 +166,7 @@ class ScraperService:
                 await asyncio.sleep(delay)
         raise last_exception
 
-    # =============== v0.8: CAPTCHA 偵測 ===============
+    # =============== v0.9: CAPTCHA 偵測 ===============
 
     CAPTCHA_MARKERS = [
         'g-recaptcha', 'grecaptcha', 'recaptcha',
@@ -194,7 +194,7 @@ class ScraperService:
                     return 'Generic CAPTCHA'
         return None
 
-    # =============== v0.8: 截圖支援 ===============
+    # =============== v0.9: 截圖支援 ===============
 
     async def _take_screenshot(self, url: str, timeout: int = 30) -> Optional[str]:
         """使用 Playwright 截取頁面截圖，回傳 Base64 編碼"""
@@ -219,7 +219,7 @@ class ScraperService:
             logger.warning(f"Screenshot failed: {e}")
             return None
 
-    # =============== v0.8: CAPTCHA 解決策略 ===============
+    # =============== v0.9: CAPTCHA 解決策略 ===============
 
     async def _solve_captcha(self, url: str, captcha_type: str) -> bool:
         """
@@ -572,7 +572,7 @@ class ScraperService:
                 cookies=cookies
             )
         
-        # 4. v0.8: CAPTCHA 偵測與解決
+        # 4. v0.9: CAPTCHA 偵測與解決
         content_str = str(result.get("data", {}).get("content", ""))
         captcha_type = self._detect_captcha(content_str)
         if captcha_type:
@@ -587,7 +587,7 @@ class ScraperService:
                 )
             logger.info(f"CAPTCHA solved for {url}, re-scraping recommended")
         
-        # 5. v0.8: 可選截圖
+        # 5. v0.9: 可選截圖
         if screenshot:
             screenshot_b64 = await self._take_screenshot(url, effective_timeout)
             result["screenshot_base64"] = screenshot_b64

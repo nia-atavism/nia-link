@@ -1,5 +1,5 @@
 """
-Nia-Link v0.8 Schemas
+Nia-Link v0.9 Schemas
 Pydantic 資料模型定義
 """
 
@@ -84,7 +84,7 @@ class ScrapeRequest(BaseModel):
         default=None,
         description="Cookie 字典，用於已登入狀態抓取（例如 {'auth_token': 'xxx'}）"
     )
-    # v0.8: 截圖支援
+    # v0.9: 截圖支援
     screenshot: bool = Field(
         default=False,
         description="是否截取頁面截圖（自動升級為 visual 模式）"
@@ -167,7 +167,7 @@ class ScrapeResponse(BaseModel):
         default=None,
         description="行動地圖 - 可操作元件列表"
     )
-    # v0.8: 截圖支援
+    # v0.9: 截圖支援
     screenshot_base64: Optional[str] = Field(
         default=None,
         description="頁面截圖的 Base64 編碼 (PNG)"
@@ -221,7 +221,7 @@ class InteractResponse(BaseModel):
     screenshot: str
     trajectory_cloud: Optional[str] = None
     points_captured: int = 0
-    # v0.8: JS 執行結果
+    # v0.9: JS 執行結果
     js_results: Optional[List[dict]] = Field(
         default=None,
         description="JavaScript 執行結果列表"
@@ -276,7 +276,7 @@ class HealthResponse(BaseModel):
 
 
 # ============================================================
-# v0.8: 工作流模型 (Workflow Models)
+# v0.9: 工作流模型 (Workflow Models)
 # ============================================================
 
 class WorkflowStep(BaseModel):
@@ -327,7 +327,7 @@ class StatsResponse(BaseModel):
 
 
 # ============================================================
-# v0.8: Diff Models (Website Change Detection)
+# v0.9: Diff Models (Website Change Detection)
 # ============================================================
 
 class DiffRequest(BaseModel):
@@ -357,7 +357,7 @@ class DiffResponse(BaseModel):
 
 
 # ============================================================
-# v0.8: Queue Models (Async Task Queue)
+# v0.9: Queue Models (Async Task Queue)
 # ============================================================
 
 class QueueSubmitRequest(BaseModel):

@@ -266,7 +266,7 @@ async def root():
     return {
         "name": settings.app_name,
         "version": settings.app_version,
-        "description": "AI 代理專用瀏覽服務層 - v0.8 生態就緒",
+        "description": "AI 代理專用瀏覽服務層 - v0.9 生態就緒",
         "features": ["Action Map", "Token Savings", "Hybrid Parsing", "Screenshot", "JS Sandbox", "Workflow", "CAPTCHA Detection"],
         "docs": "/docs"
     }
@@ -355,7 +355,7 @@ async def scrape_url(
             for action in data['actions']
         ]
     
-    # 建構 v0.8 回應格式
+    # 建構 v0.9 回應格式
     return ScrapeResponse(
         status="success",
         meta=MetaInfo(
@@ -373,7 +373,7 @@ async def scrape_url(
             links=data.get('links')
         ),
         actions=actions,
-        screenshot_base64=result.get('screenshot_base64')  # v0.8
+        screenshot_base64=result.get('screenshot_base64')  # v0.9
     )
 
 
@@ -381,9 +381,9 @@ async def scrape_url(
     "/v1/interact",
     response_model=InteractResponse,
     tags=["v0.9 Synaptic Bridge"],
-    summary="擬人化網頁交互 (v0.8)",
+    summary="擬人化網頁交互 (v0.9)",
     description="""
-## 突觸橋接交互介面 - v0.8
+## 突觸橋接交互介面 - v0.9
 
 支援擬人化滑鼠軌跡、隨機打字抖動、JS 沙箱執行、下拉選單、捲動。
 
@@ -426,16 +426,16 @@ async def interact_url(
 
 
 # ============================================================
-# v0.8: 工作流端點
+# v0.9: 工作流端點
 # ============================================================
 
 @app.post(
     "/v1/workflow",
     response_model=WorkflowResponse,
     tags=["v0.9 Workflow"],
-    summary="多頁面工作流 (v0.8)",
+    summary="多頁面工作流 (v0.9)",
     description="""
-## 多頁面工作流 - v0.8
+## 多頁面工作流 - v0.9
 
 支援多步驟連鎖動作，每步可選：scrape / interact / wait / assert。
 步驟間自動傳遞 context（cookies, actions）。
@@ -468,7 +468,7 @@ async def run_workflow(
 
 
 # ============================================================
-# v0.8: Website Change Detection
+# v0.9: Website Change Detection
 # ============================================================
 
 @app.post(
@@ -477,7 +477,7 @@ async def run_workflow(
     tags=["v0.9 Diff"],
     summary="Website change detection",
     description="""
-## Website Change Detection - v0.8
+## Website Change Detection - v0.9
 
 Compare the current content of a URL against a previously saved snapshot.
 Returns a unified diff and change summary.
@@ -532,7 +532,7 @@ async def diff_url(
 
 
 # ============================================================
-# v0.8: Async Task Queue
+# v0.9: Async Task Queue
 # ============================================================
 
 _task_queue = TaskQueue()
@@ -590,7 +590,7 @@ async def queue_status(
 
 
 # ============================================================
-# v0.8: Usage Statistics
+# v0.9: Usage Statistics
 # ============================================================
 
 @app.get(

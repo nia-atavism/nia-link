@@ -25,7 +25,7 @@ A memory hub with "cached semantics" architecture. Delivers action maps in 0.01s
 - **🛡️ Sandbox Isolation**: JavaScript executes in isolation, ensuring host safety.
 - **📉 Token Optimized**: Built-in intelligent filtering saves ~92% context space on average.
 
-### 4. v0.8 New Features
+### 4. v0.9 New Features
 - **🔄 Website Change Detection** (`/v1/diff`): Track content changes with unified diffs
 - **📋 Async Task Queue** (`/v1/queue/*`): Submit background scrape tasks
 - **⚡ Rate Limiting**: Configurable per-key token bucket rate limiter
@@ -122,7 +122,7 @@ curl -X POST http://localhost:8000/v1/interact \
   }'
 ```
 
-### Website Change Detection (v0.8)
+### Website Change Detection (v0.9)
 ```bash
 curl -X POST http://localhost:8000/v1/diff \
   -H "Authorization: Bearer your-api-key" \
@@ -130,7 +130,7 @@ curl -X POST http://localhost:8000/v1/diff \
   -d '{"url": "https://example.com"}'
 ```
 
-### Async Queue (v0.8)
+### Async Queue (v0.9)
 ```bash
 # Submit task
 curl -X POST http://localhost:8000/v1/queue/submit \
@@ -192,7 +192,7 @@ docker compose logs -f
 - [x] **v0.6**: **Motor Nerve** — Bézier curve mouse trajectories, humanized typing jitter, session persistence
 - [x] **v0.7**: **Synaptic Bridge** — MCP standardization, trajectory cloud, proxy/concurrency, Docker
 - [x] **v0.8**: **Neuro-Expansion** — Diff service, async queue, rate limiting, proxy pool rotation, 53 automated tests
-- [ ] **v0.9**: Smithery.ai & Glama ecosystem submission, billing/usage limits
+- [x] **v0.9**: Smithery.ai & Glama ecosystem submission, billing/usage limits
 
 ---
 ---
@@ -212,7 +212,7 @@ docker compose logs -f
 - **🛡️ 沙箱隔離**: 在隔離環境執行 JavaScript，確保宿主機絕對安全。
 - **📉 Token 優化**: 內建智慧過濾，平均節省 92% 的上下文空間。
 
-### 4. v0.8 新功能
+### 4. v0.9 新功能
 - **🔄 網站變更偵測** (`/v1/diff`): 追蹤內容變更，回傳 unified diff
 - **📋 非同步任務佇列** (`/v1/queue/*`): 提交背景爬取任務
 - **⚡ 速率限制**: 可配置的每 API Key Token Bucket 限流器
@@ -309,7 +309,7 @@ curl -X POST http://localhost:8000/v1/interact \
   }'
 ```
 
-### 網站變更偵測 (v0.8)
+### 網站變更偵測 (v0.9)
 ```bash
 curl -X POST http://localhost:8000/v1/diff \
   -H "Authorization: Bearer your-api-key" \
@@ -317,7 +317,7 @@ curl -X POST http://localhost:8000/v1/diff \
   -d '{"url": "https://example.com"}'
 ```
 
-### 非同步佇列 (v0.8)
+### 非同步佇列 (v0.9)
 ```bash
 # 提交任務
 curl -X POST http://localhost:8000/v1/queue/submit \

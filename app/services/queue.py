@@ -1,5 +1,5 @@
 """
-Nia-Link Task Queue v0.8
+Nia-Link Task Queue v0.9
 輕量非同步任務佇列 - 基於 asyncio.Queue
 """
 

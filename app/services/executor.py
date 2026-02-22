@@ -1,5 +1,5 @@
 """
-Nia-Link Executor Service v0.8
+Nia-Link Executor Service v0.9
 突觸橋接 (Synaptic Bridge) - 擬人化交互、軌跡追蹤、JS 沙箱
 """
 
@@ -88,7 +88,7 @@ class ExecutorService:
 
     async def _safe_evaluate(self, page: Page, script: str, timeout_ms: int = 5000) -> dict:
         """
-        v0.8: 安全執行 JavaScript，帶有逾時保護
+        v0.9: 安全執行 JavaScript，帶有逾時保護
         """
         try:
             result = await asyncio.wait_for(
@@ -134,7 +134,7 @@ class ExecutorService:
             page = await context.new_page()
             
             results = []
-            js_results = []  # v0.8: JS 執行結果
+            js_results = []  # v0.9: JS 執行結果
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=60000)
                 
@@ -171,19 +171,19 @@ class ExecutorService:
                             await page.wait_for_timeout(ms)
                             results.append(f"Paused for {ms}ms")
                         elif act_type == "evaluate":
-                            # v0.8: JS 沙箱執行
+                            # v0.9: JS 沙箱執行
                             script = action.get("script", "")
                             timeout_ms = action.get("timeout", 5000)
                             js_result = await self._safe_evaluate(page, script, timeout_ms)
                             js_results.append(js_result)
                             results.append(f"JS evaluated: {js_result['status']}")
                         elif act_type == "select":
-                            # v0.8: 下拉選單支援
+                            # v0.9: 下拉選單支援
                             value = action.get("value", "")
                             await page.select_option(selector, value)
                             results.append(f"Selected '{value}' in {selector}")
                         elif act_type == "scroll":
-                            # v0.8: 捲動支援
+                            # v0.9: 捲動支援
                             direction = action.get("direction", "down")
                             amount = action.get("amount", 500)
                             if direction == "down":
@@ -192,7 +192,7 @@ class ExecutorService:
                                 await page.evaluate(f"window.scrollBy(0, -{amount})")
                             results.append(f"Scrolled {direction} {amount}px")
                         elif act_type == "auto_fill":
-                            # v0.8: 智慧填表
+                            # v0.9: 智慧填表
                             field_mapping = action.get("field_mapping", {})
                             filled_count = 0
                             for field_selector, field_value in field_mapping.items():
@@ -226,7 +226,7 @@ class ExecutorService:
                 screenshot_path = str(self.temp_dir / f"nia-link-v08-{ts}.png")
                 await page.screenshot(path=screenshot_path)
                 
-                # v0.8: 截圖 Base64
+                # v0.9: 截圖 Base64
                 screenshot_bytes = await page.screenshot(type="png")
                 screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
                 
