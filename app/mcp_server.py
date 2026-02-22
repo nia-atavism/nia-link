@@ -484,16 +484,34 @@ class SSEHandler:
             return
         
         if method == "POST":
-            # Smithery 單端點模式：POST 到 /sse
-            try:
-                await sse.handle_post_message(scope, receive, send)
-            except Exception as e:
-                _mcp_logger.error(f"SSE POST error: {e}", exc_info=True)
-                response = StarletteJSONResponse(
-                    content={"error": "sse_message_error", "detail": str(e)},
-                    status_code=500,
-                )
-                await response(scope, receive, send)
+            # 智慧分派：
+            # - 如果有 session_id → SSE 訊息 (handle_post_message)
+            # - 如果沒有 session_id → Streamable HTTP (JSON-RPC initialize)
+            request = StarletteRequest(scope, receive, send)
+            session_id = request.query_params.get("session_id")
+            
+            if session_id:
+                # SSE session 已建立，走 SSE 訊息處理
+                try:
+                    await sse.handle_post_message(scope, receive, send)
+                except Exception as e:
+                    _mcp_logger.error(f"SSE POST error: {e}", exc_info=True)
+                    response = StarletteJSONResponse(
+                        content={"error": "sse_message_error", "detail": str(e)},
+                        status_code=500,
+                    )
+                    await response(scope, receive, send)
+            else:
+                # Smithery Streamable HTTP：直接 POST JSON-RPC initialize
+                try:
+                    await session_manager.handle_request(scope, receive, send)
+                except Exception as e:
+                    _mcp_logger.error(f"Streamable HTTP on /sse error: {e}", exc_info=True)
+                    response = StarletteJSONResponse(
+                        content={"error": "streamable_http_error", "detail": str(e)},
+                        status_code=500,
+                    )
+                    await response(scope, receive, send)
             return
         
         if method == "GET":
@@ -503,6 +521,14 @@ class SSEHandler:
                     await app.run(read_stream, write_stream, app.create_initialization_options())
             except Exception as e:
                 _mcp_logger.error(f"SSE GET error: {e}", exc_info=True)
+            return
+        
+        if method == "DELETE":
+            # Streamable HTTP session cleanup
+            try:
+                await session_manager.handle_request(scope, receive, send)
+            except Exception as e:
+                _mcp_logger.error(f"DELETE on /sse error: {e}", exc_info=True)
             return
         
         # 安全墊片
@@ -549,7 +575,7 @@ mcp_starlette_app = Starlette(
         # Streamable HTTP (Smithery primary transport)
         Route("/", endpoint=StreamableHTTPHandler(), methods=["GET", "POST", "DELETE", "OPTIONS"]),
         # 關鍵：/sse 同時接管 GET (串流) 與 POST (Smithery 單端點)
-        Route("/sse", endpoint=SSEHandler(), methods=["GET", "POST", "OPTIONS"]),
+        Route("/sse", endpoint=SSEHandler(), methods=["GET", "POST", "DELETE", "OPTIONS"]),
         # Legacy message endpoints
         Route("/messages", endpoint=SSEMessageHandler(), methods=["POST", "OPTIONS"]),
         Route("/messages/", endpoint=SSEMessageHandler(), methods=["POST", "OPTIONS"]),
