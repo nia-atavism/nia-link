@@ -447,21 +447,30 @@ async def handle_streamable_http(request):
 
 
 # 2. Legacy SSE Transport (backward compatibility with Claude Desktop)
-sse = SseServerTransport("/messages/")
+# NOTE: MCP SDK 的 connect_sse 會自動把 scope["root_path"] 拼接到 endpoint 前面
+#       (見 sse.py line 158: full_message_path = root_path + self._endpoint)
+#       由於子應用掛載在 /mcp，root_path 已經是 "/mcp"。
+#       為了避免 /mcp/mcp/ 雙重前綴，我們在呼叫 connect_sse 時清空 root_path，
+#       並讓 endpoint 直接使用完整路徑 /mcp/messages/。
+sse = SseServerTransport("/mcp/messages/")
 
 
 async def handle_sse(request):
     """SSE endpoint — legacy transport for Claude Desktop.
     
     防彈級：確保 SSE 連線在任何情況下都不會回傳 None。
+    清除 root_path 避免 MCP SDK 產生 /mcp/mcp/ 雙重前綴。
     """
     # 1. 處理 OPTIONS 預檢請求
     if request.method == "OPTIONS":
         return StarletteResponse(status_code=200)
 
     # 2. 嘗試建立 SSE 連線
+    #    關鍵：清空 scope["root_path"] 避免 SDK 重複拼接 /mcp
+    scope = dict(request.scope)
+    scope["root_path"] = ""
     try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
+        async with sse.connect_sse(scope, request.receive, request._send) as (read_stream, write_stream):
             await app.run(read_stream, write_stream, app.create_initialization_options())
         # SSE 串流結束後正常回傳
         return StarletteResponse(status_code=200)
