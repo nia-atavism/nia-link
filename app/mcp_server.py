@@ -394,19 +394,44 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
     else:
         raise ValueError(f"Unknown tool: {name}")
 
-# SSE Transport
-sse = SseServerTransport("/mcp/messages")
+# ============================================================
+# Dual Transport: Streamable HTTP (Smithery) + SSE (Claude Desktop)
+# ============================================================
+
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+
+# 1. Streamable HTTP Transport (Smithery requirement)
+#    Handles POST (JSON-RPC init/tool calls) and GET (event streams) on single path
+session_manager = StreamableHTTPSessionManager(
+    app=app,
+    json_response=False,
+    stateless=True  # Stateless mode: no session persistence needed
+)
+
+async def handle_streamable_http(request):
+    """Streamable HTTP endpoint — handles JSON-RPC over HTTP."""
+    await session_manager.handle_request(
+        request.scope, request.receive, request._send
+    )
+
+# 2. Legacy SSE Transport (backward compatibility with Claude Desktop)
+sse = SseServerTransport("/mcp/messages/")
 
 async def handle_sse(request):
+    """SSE endpoint — legacy transport for Claude Desktop."""
     async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
-async def handle_messages(request):
+async def handle_sse_messages(request):
+    """SSE message handler — receives POST messages for SSE sessions."""
     await sse.handle_post_message(request.scope, request.receive, request._send)
 
 mcp_routes = [
-    Route("/sse", endpoint=handle_sse, methods=["GET", "POST"]),
-    Route("/messages", endpoint=handle_messages, methods=["POST"]),
+    # Streamable HTTP: single endpoint handles both GET and POST
+    Route("/", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE", "OPTIONS"]),
+    # Legacy SSE endpoints (kept for backward compatibility)
+    Route("/sse", endpoint=handle_sse),
+    Route("/messages", endpoint=handle_sse_messages, methods=["POST"]),
 ]
 
 if __name__ == "__main__":

@@ -40,6 +40,6 @@ EXPOSE 8000
 RUN useradd -m nialink_user && chown -R nialink_user:nialink_user $APP_HOME
 USER nialink_user
 
-# 預設指令：啟動 MCP Server
-# 使用模組化調用以支援相對導入
-CMD ["python", "-m", "app.mcp_server"]
+# 預設指令：啟動 FastAPI + MCP 雙軌伺服器
+# Streamable HTTP + SSE 雙傳輸層
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
