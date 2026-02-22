@@ -58,11 +58,11 @@ logger = logging.getLogger("nia-link")
 
 # MCP Server 整合
 try:
-    from .mcp_server import mcp_routes
+    from .mcp_server import mcp_starlette_app
     MCP_ENABLED = True
 except ImportError as e:
     logger.warning(f"MCP 模組載入失敗: {e}")
-    mcp_routes = []
+    mcp_starlette_app = None
     MCP_ENABLED = False
 
 
@@ -127,9 +127,11 @@ Authorization: Bearer your-api-key
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    # 掛載 MCP 路由
-    routes=[Mount("/mcp", routes=mcp_routes)] if MCP_ENABLED else []
 )
+
+# 掛載 MCP 子應用 (帶獨立 CORS 中間件)
+if MCP_ENABLED:
+    app.mount("/mcp", mcp_starlette_app)
 
 # ============================================================
 # v0.7: Meta-Origin (元啟) Terminal Easter Egg

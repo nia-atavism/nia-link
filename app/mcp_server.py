@@ -426,13 +426,32 @@ async def handle_sse_messages(request):
     """SSE message handler — receives POST messages for SSE sessions."""
     await sse.handle_post_message(request.scope, request.receive, request._send)
 
-mcp_routes = [
-    # Streamable HTTP: single endpoint handles both GET and POST
-    Route("/", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE", "OPTIONS"]),
-    # Legacy SSE endpoints (kept for backward compatibility)
-    Route("/sse", endpoint=handle_sse),
-    Route("/messages", endpoint=handle_sse_messages, methods=["POST"]),
-]
+# Build a Starlette sub-app with its own CORS middleware
+# (FastAPI CORS middleware does NOT apply to Mount-level routes)
+from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware as StarletteCORS
+
+mcp_starlette_app = Starlette(
+    routes=[
+        Route("/", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE", "OPTIONS"]),
+        Route("/sse", endpoint=handle_sse),
+        Route("/messages", endpoint=handle_sse_messages, methods=["POST"]),
+    ],
+    middleware=[
+        Middleware(
+            StarletteCORS,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["*"],
+        )
+    ]
+)
+
+# Export both: Starlette ASGI app (for Mount) and raw routes (for fallback)
+mcp_routes = mcp_starlette_app.routes
 
 if __name__ == "__main__":
     from mcp.server.stdio import stdio_server
