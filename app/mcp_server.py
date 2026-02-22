@@ -402,10 +402,10 @@ async def handle_sse(request):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 async def handle_messages(request):
-    await sse.handle_post_request(request.scope, request.receive, request._send)
+    await sse.handle_post_message(request.scope, request.receive, request._send)
 
 mcp_routes = [
-    Route("/sse", endpoint=handle_sse),
+    Route("/sse", endpoint=handle_sse, methods=["GET", "POST"]),
     Route("/messages", endpoint=handle_messages, methods=["POST"]),
 ]
 
