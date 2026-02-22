@@ -58,11 +58,12 @@ logger = logging.getLogger("nia-link")
 
 # MCP Server 整合
 try:
-    from .mcp_server import mcp_starlette_app
+    from .mcp_server import mcp_starlette_app, session_manager
     MCP_ENABLED = True
 except ImportError as e:
     logger.warning(f"MCP 模組載入失敗: {e}")
     mcp_starlette_app = None
+    session_manager = None
     MCP_ENABLED = False
 
 
@@ -82,12 +83,19 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info(f"🚀 {settings.app_name} v{settings.app_version} 啟動中...")
     logger.info(f"📖 API 文檔: http://localhost:8000/docs")
-    if MCP_ENABLED:
-        logger.info(f"🔌 MCP SSE 端點: /mcp/sse")
-    else:
-        logger.warning(f"MCP 功能未啟用")
-    yield
-    logger.info(f"👋 {settings.app_name} 關閉中...")
+    
+    try:
+        if MCP_ENABLED and session_manager:
+            logger.info(f"🔌 MCP Streamable HTTP 端點: /mcp/")
+            logger.info(f"🔌 MCP SSE 端點: /mcp/sse")
+            # 關鍵：在主應用生命週期中啟動 MCP 的非同步任務群組
+            async with session_manager.run():
+                yield
+        else:
+            logger.warning(f"MCP 功能未啟用")
+            yield
+    finally:
+        logger.info(f"👋 {settings.app_name} 關閉中...")
 
 
 # ============================================================
