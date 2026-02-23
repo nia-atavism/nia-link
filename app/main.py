@@ -10,9 +10,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
+import os
 
 from .config import get_settings
 from .auth import verify_api_key
@@ -141,6 +143,15 @@ Authorization: Bearer your-api-key
 if MCP_ENABLED:
     app.mount("/mcp", mcp_starlette_app)
 
+# --- v0.9: 前端靜態檔案掛載 ---
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
 # ============================================================
 # v0.7: Meta-Origin (元啟) Terminal Easter Egg
 # ============================================================
@@ -267,11 +278,11 @@ async def health_check():
 
 
 @app.get(
-    "/",
+    "/v1/info",
     tags=["System"],
     summary="API 資訊"
 )
-async def root():
+async def api_info():
     """顯示 API 基本資訊"""
     return {
         "name": settings.app_name,

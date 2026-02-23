@@ -6,7 +6,7 @@ Pydantic 資料模型定義
 from enum import Enum
 from typing import Optional, List
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 
 
 # ============================================================
@@ -173,8 +173,8 @@ class ScrapeResponse(BaseModel):
         description="頁面截圖的 Base64 編碼 (PNG)"
     )
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "status": "success",
@@ -201,7 +201,7 @@ class ScrapeResponse(BaseModel):
                 }
             ]
         }
-    }
+    )
 
 
 # ============================================================
