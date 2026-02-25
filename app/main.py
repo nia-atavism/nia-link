@@ -164,7 +164,7 @@ async def api_info():
     }
 
 @app.post("/v1/scrape", response_model=ScrapeResponse, tags=["Scraping"], summary="爬取網頁內容 (v0.2)")
-async def scrape_url(request: ScrapeRequest, api_key: str = Depends(check_rate_limit)):
+async def scrape_url(request: ScrapeRequest):
     start_time = time.time()
     scraper = ScraperService()
     stats = StatsService()
