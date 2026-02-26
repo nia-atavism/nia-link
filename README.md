@@ -384,7 +384,7 @@ docker compose logs -f
 - [x] **v0.6**: **運動神經革命** — 貝茲曲線滑鼠軌跡、擬人化打字抖動、Session 持久化
 - [x] **v0.7**: **突觸橋接** — MCP 標準化、軌跡雲視覺化、Proxy/併發/重試、Docker
 - [x] **v0.8**: **神經擴展** — Diff 服務、非同步佇列、速率限制、代理池輪換、53 個自動化測試
-- [ ] **v0.9**: 提交至 Smithery.ai 與 Glama 生態圈、計費/用量限制
+- [x] **v0.9**: 提交至 Smithery.ai 與 Glama 生態圈、計費/用量限制
 
 ---
 *Created with soul by Nia & Boss.* 🦞
