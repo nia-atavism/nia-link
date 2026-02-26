@@ -1,45 +1,34 @@
-# ============================================
-# Nia-Link v0.9.1 Dockerfile
-# Optimized for Smithery.ai & Enterprise Deployment
-# ============================================
+# 1. 選擇輕量級的 Python 3.11 作為基底
+FROM python:3.11-slim
 
-# 使用微軟官方 Playwright 映像檔，確保瀏覽器環境完全相容
-FROM mcr.microsoft.com/playwright/python:v1.41.0-jammy
+# 設定容器內的工作目錄
+WORKDIR /app
 
-# 設定環境變數：確保輸出不緩衝、不產生 pyc 檔案，並定義工作目錄
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    APP_HOME=/app \
-    HEADLESS=true \
-    API_KEYS=nia-link-mcp-access-key
-
-WORKDIR $APP_HOME
-
-# 安裝 OpenCV 所需的系統層級依賴 (針對 Template Matching)
+# 2. 安裝基礎系統依賴 (git 是為了某些依賴安裝，libgl1 等是為了可能的影像處理)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libgl1 \
     libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 複製 Python 依賴清單並安裝
+# 3. 複製依賴清單並安裝基礎 Python 套件
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 複製 Nia-Link 核心程式碼
+# 4. 【一擊必殺的核心】安裝 Playwright 及其深層作業系統依賴
+# 先安裝 Chromium 瀏覽器本體
+RUN playwright install chromium
+# 再強制安裝所有 Ubuntu/Debian 系統級的依賴 (字型、共享庫等)
+RUN playwright install-deps chromium
+
+# 5. 將你所有的後端程式碼複製進容器
 COPY . .
 
-# 建立必要的運行路徑
-RUN mkdir -p registry/sessions tmp
-
-# 暴露 FastAPI 預設埠口 (MCP over SSE 使用)
+# 6. 暴露 Railway 預設分配的 Port
 EXPOSE 8000
 
-# 建立非 root 使用者以提升容器安全性 (企業級部署最佳實踐)
-RUN useradd -m nialink_user && chown -R nialink_user:nialink_user $APP_HOME
-USER nialink_user
-
-# 預設指令：啟動 FastAPI + MCP 雙軌伺服器
-# Streamable HTTP + SSE 雙傳輸層
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 7. 啟動 FastAPI 伺服器
+# 使用 sh -c 來確保環境變數 PORT 正確注入
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
