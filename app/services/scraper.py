@@ -142,7 +142,8 @@ class ScraperService:
                 "timestamp": time.time(),
                 "title": result["data"]["title"],
                 "actions": result["data"]["actions"],
-                "metadata": result["data"]["metadata"]
+                "metadata": result["data"]["metadata"],
+                "cost": result.get("cost") # 👈 關鍵：補存成本資訊
             }
             self.registry_path.write_text(json.dumps(data, indent=2))
         except Exception as e:
@@ -537,6 +538,10 @@ class ScraperService:
                 # 判斷當初存入快取時是否為 Visual 模式
                 is_visual = cached.get("metadata", {}).get("visual_mode", False)
                 cached_mode = ScrapeMode.VISUAL if is_visual else ScrapeMode.FAST
+                
+                # 恢復快取中的 Token 節省資訊，若無則預設為 0
+                cost_data = cached.get("cost", {"original_size": 0, "cleaned_size": 0, "tokens_saved": 0, "reduction_percent": 0})
+                
                 return {
                     "data": {
                         "title": cached.get("title", "Cached"),
@@ -545,7 +550,7 @@ class ScraperService:
                         "actions": cached.get("actions"),
                         "links": None
                     },
-                    "cost": {"original_size": 0, "cleaned_size": 0, "tokens_saved": 0, "reduction_percent": 0},
+                    "cost": cost_data, # 👈 關鍵：回傳正確的節省數據
                     "mode_used": cached_mode, # 👈 動態回傳正確的模式
                     "from_registry": True
                 }
