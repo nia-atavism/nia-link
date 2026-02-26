@@ -9,12 +9,17 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
 import os
+
+# 👇 引入防護盾模組 (Rate Limiting)
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from .config import get_settings
 from .auth import verify_api_key
@@ -106,6 +111,9 @@ async def lifespan(app: FastAPI):
 
 settings = get_settings()
 
+# 建立防護盾實體，使用訪客的真實 IP 作為追蹤基準
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title=settings.app_name,
     description="""
@@ -139,6 +147,10 @@ Authorization: Bearer your-api-key
     openapi_url="/openapi.json",
 )
 
+# 將防護盾註冊進 FastAPI 的全域狀態與異常處理器中
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # 掛載 MCP 子應用 (帶獨立 CORS 中間件)
 if MCP_ENABLED:
     app.mount("/mcp", mcp_starlette_app)
@@ -164,17 +176,18 @@ async def api_info():
     }
 
 @app.post("/v1/scrape", response_model=ScrapeResponse, tags=["Scraping"], summary="爬取網頁內容 (v0.2)")
-async def scrape_url(request: ScrapeRequest):
+@limiter.limit("5/minute")
+async def scrape_url(request: Request, scrape_data: ScrapeRequest):
     start_time = time.time()
     scraper = ScraperService()
     stats = StatsService()
-    result = await scraper.scrape(url=str(request.url), output_format=request.format, mode=request.mode, wait_for_selector=request.wait_for_selector, timeout=request.timeout, extract_actions=request.extract_actions, cookies=request.cookies, screenshot=request.screenshot)
+    result = await scraper.scrape(url=str(scrape_data.url), output_format=scrape_data.format, mode=scrape_data.mode, wait_for_selector=scrape_data.wait_for_selector, timeout=scrape_data.timeout, extract_actions=scrape_data.extract_actions, cookies=scrape_data.cookies, screenshot=scrape_data.screenshot)
     process_time = round(time.time() - start_time, 3)
     stats.record_scrape(process_time)
     data = result['data']; cost = result['cost']
-    content_text = json.dumps(data['content'], ensure_ascii=False, indent=2) if request.format == OutputFormat.JSON else data['content']
+    content_text = json.dumps(data['content'], ensure_ascii=False, indent=2) if scrape_data.format == OutputFormat.JSON else data['content']
     actions = [ActionItem(type=ActionType(a['type']), label=a['label'], selector=a['selector'], importance=Importance(a.get('importance', 'medium')), value=a.get('value'), placeholder=a.get('placeholder'), options=a.get('options')) for a in data['actions']] if data.get('actions') else None
-    return ScrapeResponse(status="success", meta=MetaInfo(url=str(request.url), timestamp=datetime.now(timezone.utc), token_savings=f"{cost.get('reduction_percent', 0)}%", process_time=process_time, mode_used=result.get('mode_used', ScrapeMode.FAST)), content=ContentInfo(title=data.get('title') or 'Untitled', markdown=content_text, raw_text_length=cost.get('original_size', 0), description=data.get('metadata', {}).get('description'), links=data.get('links')), actions=actions, screenshot_base64=result.get('screenshot_base64'))
+    return ScrapeResponse(status="success", meta=MetaInfo(url=str(scrape_data.url), timestamp=datetime.now(timezone.utc), token_savings=f"{cost.get('reduction_percent', 0)}%", process_time=process_time, mode_used=result.get('mode_used', ScrapeMode.FAST)), content=ContentInfo(title=data.get('title') or 'Untitled', markdown=content_text, raw_text_length=cost.get('original_size', 0), description=data.get('metadata', {}).get('description'), links=data.get('links')), actions=actions, screenshot_base64=result.get('screenshot_base64'))
 
 @app.post("/v1/interact", response_model=InteractResponse, tags=["v0.9 Synaptic Bridge"], summary="擬人化網頁交互 (v0.9)")
 async def interact_url(request: InteractRequest, api_key: str = Depends(check_rate_limit)):

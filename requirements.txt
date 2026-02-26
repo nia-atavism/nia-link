@@ -32,6 +32,9 @@ mcp[cli]>=1.0.0
 # SSE Support for MCP
 sse-starlette>=2.0.0
 
+# Rate Limiting
+slowapi>=0.1.9
+
 # Math (for Bézier curves)
 numpy>=1.24.0
 
