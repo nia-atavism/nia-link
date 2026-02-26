@@ -772,6 +772,7 @@ class ScraperService:
             (() => {{
                 const dismissPopups = {self.POPUP_DISMISS_SCRIPT};
                 const sniffer = {self.WEBMCP_SNIFFER_SCRIPT};
+                
                 dismissPopups();
                 return sniffer();
             }})()
@@ -789,9 +790,9 @@ class ScraperService:
             
             config = CrawlerRunConfig(**config_kwargs)
             
-            # 【強化防護】手動啟動並管理生命週期，避免殭屍瀏覽器殘留
+            # 【強化防護】加入明確的 crawler 變數初始化，不使用 async with 以便精確控制
             crawler = AsyncWebCrawler(always_bypass_cache=True)
-            await crawler.start()
+            await crawler.start() # 強制手動啟動
             
             result = await asyncio.wait_for(
                 crawler.arun(url, config=config),
@@ -805,6 +806,7 @@ class ScraperService:
                     details={"url": url, "mode": "visual"}
                 )
             
+            # 提取 WebMCP 探測結果
             webmcp_info = getattr(result, 'js_execution_result', {}).get('value', {})
             if webmcp_info and webmcp_info.get('supported'):
                 logger.info(f"[WebMCP] Native support detected on {urlparse(url).netloc} (v{webmcp_info.get('version')})")
@@ -841,8 +843,8 @@ class ScraperService:
                         'published_date': metadata.get('published_date'),
                         'description': metadata.get('description'),
                         'visual_mode': True,
-                        'webmcp_native': webmcp_info.get('supported', False),
-                        'webmcp_version': webmcp_info.get('version')
+                        'webmcp_native': webmcp_info.get('supported', False) if webmcp_info else False,
+                        'webmcp_version': webmcp_info.get('version') if webmcp_info else None
                     },
                     'links': links,
                     'actions': actions
@@ -858,26 +860,30 @@ class ScraperService:
                 details={"url": url, "mode": "visual"}
             )
         except asyncio.TimeoutError:
-            logger.error(f"Visual mode timeout for {url}")
-            # 超時也需要降級，但要確保資源釋放
-            return await self._scrape_fast(url=url, base_url=base_url, output_format=output_format, timeout=timeout, extract_actions=extract_actions, cookies=cookies)
+            logger.error(f"⏳ Visual 模式執行超時: {url}")
+            raise ScraperError(
+                code=ErrorCode.TARGET_TIMEOUT,
+                message="Target website took too long to respond (visual mode)",
+                details={"url": url, "timeout": timeout, "mode": "visual"}
+            )
         except ScraperError:
             raise
         except Exception as e:
-            logger.error(f"Visual mode failed: {str(e)} | Fallback to FAST", exc_info=True)
+            # 記錄真實死因，不再讓它無聲無息地降級
+            logger.error(f"🚨 Visual 模式發生嚴重錯誤，準備降級: {str(e)}")
             try:
                 return await self._scrape_fast(url=url, base_url=base_url, output_format=output_format, timeout=timeout, extract_actions=extract_actions, cookies=cookies)
-            except Exception as fe:
+            except Exception as fallback_e:
                 raise ScraperError(
                     code=ErrorCode.INTERNAL_ERROR,
-                    message=f"Visual mode failed ({str(e)}) and fallback also failed: {str(fe)}",
+                    message=f"Visual mode failed ({str(e)}) and fallback also failed: {str(fallback_e)}",
                     details={"url": url, "mode": "visual"}
                 )
         finally:
-            # 【關鍵修復】無論成功失敗，強制關閉以釋放 Playwright 進程
+            # 【一擊必殺】：無論成功或失敗，強制砍掉這個 crawler 的所有背景進程
             if crawler:
                 try:
+                    logger.info("🧹 強制清理 Crawl4AI 資源...")
                     await crawler.close()
-                    logger.debug("Crawl4AI crawler instance closed safely.")
                 except Exception as ce:
                     logger.warning(f"Error during crawler closure: {ce}")
