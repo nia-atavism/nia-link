@@ -560,7 +560,9 @@ class ScraperService:
         effective_timeout = timeout or self.settings.scraper_timeout
         
         # 3. 根據模式選擇爬蟲策略
+        # ⚠️ 強制校準：確保使用 target_mode 而非傳入的原始 mode
         if target_mode == ScrapeMode.VISUAL:
+            logger.info(f"🔮 正在以 VISUAL 模式啟動無頭瀏覽器...")
             result = await self._scrape_visual(
                 url=url,
                 base_url=base_url,
