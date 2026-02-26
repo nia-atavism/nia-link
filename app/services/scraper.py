@@ -521,6 +521,14 @@ class ScraperService:
         screenshot: bool = False
     ) -> dict:
         """實際的抓取實作邏輯"""
+        # 智能模式切換：針對特定高防禦或動態網域強制使用 VISUAL 模式
+        target_mode = mode
+        dynamic_domains = ["x.com", "twitter.com", "threads.net", "facebook.com", "instagram.com"]
+        if any(domain in url.lower() for domain in dynamic_domains):
+            if target_mode != ScrapeMode.VISUAL:
+                logger.info(f"🛡️ 偵測到動態目標 {url}，自動切換至 VISUAL 模式以穿透防禦。")
+                target_mode = ScrapeMode.VISUAL
+
         # 1. 檢查緩存 (Memory Center)
         if use_cache and not screenshot:
             cached = self._get_cached_map(url)
@@ -552,7 +560,7 @@ class ScraperService:
         effective_timeout = timeout or self.settings.scraper_timeout
         
         # 3. 根據模式選擇爬蟲策略
-        if mode == ScrapeMode.VISUAL:
+        if target_mode == ScrapeMode.VISUAL:
             result = await self._scrape_visual(
                 url=url,
                 base_url=base_url,
