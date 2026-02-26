@@ -534,6 +534,9 @@ class ScraperService:
             cached = self._get_cached_map(url)
             if cached:
                 logger.info(f"Cache hit for {urlparse(url).netloc}")
+                # 判斷當初存入快取時是否為 Visual 模式
+                is_visual = cached.get("metadata", {}).get("visual_mode", False)
+                cached_mode = ScrapeMode.VISUAL if is_visual else ScrapeMode.FAST
                 return {
                     "data": {
                         "title": cached.get("title", "Cached"),
@@ -543,7 +546,7 @@ class ScraperService:
                         "links": None
                     },
                     "cost": {"original_size": 0, "cleaned_size": 0, "tokens_saved": 0, "reduction_percent": 0},
-                    "mode_used": ScrapeMode.FAST,
+                    "mode_used": cached_mode, # 👈 動態回傳正確的模式
                     "from_registry": True
                 }
         
