@@ -204,7 +204,7 @@ async def scrape_url(request: Request, scrape_request: ScrapeRequest):
             timestamp=datetime.now(timezone.utc), 
             token_savings=f"{cost.get('reduction_percent', 0)}%", 
             process_time=process_time, 
-            mode_used=result.get('mode_used', ScrapeMode.FAST)
+            mode_used=result.get('mode_used', scrape_request.mode)
         ), 
         content=ContentInfo(
             title=data.get('title') or 'Untitled', 
