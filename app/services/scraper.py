@@ -762,20 +762,16 @@ class ScraperService:
     ) -> dict:
         """
         Level 2: 視覺分析模式 (混合 WebMCP 支持)
-        
         使用無頭瀏覽器進行完整渲染，並優先探測 WebMCP 支援。
         """
+        crawler = None
         try:
-            # 嘗試使用 Crawl4AI
             from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
             
-            # v0.9: 修正 JS 代碼拼接，確保不產生語法錯誤
-            # 同時整合彈窗關閉與 WebMCP 嗅探
             js_code = f"""
             (() => {{
                 const dismissPopups = {self.POPUP_DISMISS_SCRIPT};
                 const sniffer = {self.WEBMCP_SNIFFER_SCRIPT};
-                
                 dismissPopups();
                 return sniffer();
             }})()
@@ -793,73 +789,67 @@ class ScraperService:
             
             config = CrawlerRunConfig(**config_kwargs)
             
-            async with AsyncWebCrawler() as crawler:
-                result = await asyncio.wait_for(
-                    crawler.arun(url, config=config),
-                    timeout=timeout + 10
+            # 【強化防護】手動啟動並管理生命週期，避免殭屍瀏覽器殘留
+            crawler = AsyncWebCrawler(always_bypass_cache=True)
+            await crawler.start()
+            
+            result = await asyncio.wait_for(
+                crawler.arun(url, config=config),
+                timeout=timeout + 10
+            )
+            
+            if not result.success:
+                raise ScraperError(
+                    code=ErrorCode.TARGET_UNREACHABLE,
+                    message=f"Failed to fetch URL: {getattr(result, 'error_message', 'Unknown error')}",
+                    details={"url": url, "mode": "visual"}
                 )
-                
-                if not result.success:
-                    raise ScraperError(
-                        code=ErrorCode.TARGET_UNREACHABLE,
-                        message=f"Failed to fetch URL: {getattr(result, 'error_message', 'Unknown error')}",
-                        details={"url": url, "mode": "visual"}
-                    )
-                
-                # v0.9: 提取 WebMCP 探測結果 (通常在 js_execution_result 中)
-                webmcp_info = getattr(result, 'js_execution_result', {}).get('value', {})
-                if webmcp_info.get('supported'):
-                    logger.info(f"[WebMCP] Native support detected on {urlparse(url).netloc} (v{webmcp_info.get('version')})")
-                
-                html_content = result.html
-                original_size = len(html_content.encode('utf-8'))
-                
-                # 提取元數據
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(html_content, 'lxml')
-                
-                metadata = self.cleaner.extract_metadata(soup)
-                links = self.cleaner.extract_links(soup, base_url)
-                
-                # 提取可操作元件
-                actions = None
-                if extract_actions:
-                    actions = self.extractor.extract_actions(html_content)
-                
-                # 轉換內容
-                if output_format == OutputFormat.MARKDOWN:
-                    content = self.cleaner.to_markdown(html_content, url=url)
-                elif output_format == OutputFormat.JSON:
-                    content = self.cleaner.to_json_structure(html_content)
-                else:
-                    content = self.cleaner.to_text(html_content)
-                
-                # 計算大小與節省
-                if isinstance(content, dict):
-                    cleaned_size = len(json.dumps(content, ensure_ascii=False).encode('utf-8'))
-                else:
-                    cleaned_size = len(content.encode('utf-8'))
-                
-                cost_info = self.cleaner.calculate_savings(original_size, cleaned_size)
-                
-                return {
-                    'data': {
-                        'title': metadata.get('title') or 'Untitled',
-                        'content': content,
-                        'metadata': {
-                            'author': metadata.get('author'),
-                            'published_date': metadata.get('published_date'),
-                            'description': metadata.get('description'),
-                            'visual_mode': True,
-                            'webmcp_native': webmcp_info.get('supported', False),
-                            'webmcp_version': webmcp_info.get('version')
-                        },
-                        'links': links,
-                        'actions': actions
+            
+            webmcp_info = getattr(result, 'js_execution_result', {}).get('value', {})
+            if webmcp_info and webmcp_info.get('supported'):
+                logger.info(f"[WebMCP] Native support detected on {urlparse(url).netloc} (v{webmcp_info.get('version')})")
+            
+            html_content = result.html
+            original_size = len(html_content.encode('utf-8'))
+            
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_content, 'lxml')
+            
+            metadata = self.cleaner.extract_metadata(soup)
+            links = self.cleaner.extract_links(soup, base_url)
+            
+            actions = None
+            if extract_actions:
+                actions = self.extractor.extract_actions(html_content)
+            
+            if output_format == OutputFormat.MARKDOWN:
+                content = self.cleaner.to_markdown(html_content, url=url)
+            elif output_format == OutputFormat.JSON:
+                content = self.cleaner.to_json_structure(html_content)
+            else:
+                content = self.cleaner.to_text(html_content)
+            
+            cleaned_size = len(json.dumps(content, ensure_ascii=False).encode('utf-8')) if isinstance(content, dict) else len(content.encode('utf-8'))
+            cost_info = self.cleaner.calculate_savings(original_size, cleaned_size)
+            
+            return {
+                'data': {
+                    'title': metadata.get('title') or 'Untitled',
+                    'content': content,
+                    'metadata': {
+                        'author': metadata.get('author'),
+                        'published_date': metadata.get('published_date'),
+                        'description': metadata.get('description'),
+                        'visual_mode': True,
+                        'webmcp_native': webmcp_info.get('supported', False),
+                        'webmcp_version': webmcp_info.get('version')
                     },
-                    'cost': cost_info,
-                    'mode_used': ScrapeMode.VISUAL
-                }
+                    'links': links,
+                    'actions': actions
+                },
+                'cost': cost_info,
+                'mode_used': ScrapeMode.VISUAL
+            }
                 
         except ImportError:
             raise ScraperError(
@@ -868,20 +858,26 @@ class ScraperService:
                 details={"url": url, "mode": "visual"}
             )
         except asyncio.TimeoutError:
-            raise ScraperError(
-                code=ErrorCode.TARGET_TIMEOUT,
-                message="Target website took too long to respond (visual mode)",
-                details={"url": url, "timeout": timeout, "mode": "visual"}
-            )
+            logger.error(f"Visual mode timeout for {url}")
+            # 超時也需要降級，但要確保資源釋放
+            return await self._scrape_fast(url=url, base_url=base_url, output_format=output_format, timeout=timeout, extract_actions=extract_actions, cookies=cookies)
         except ScraperError:
             raise
         except Exception as e:
-            # Fallback
+            logger.error(f"Visual mode failed: {str(e)} | Fallback to FAST", exc_info=True)
             try:
-                return await self._scrape_fast(url=url, base_url=base_url, output_format=output_format, timeout=timeout, extract_actions=extract_actions)
-            except Exception:
+                return await self._scrape_fast(url=url, base_url=base_url, output_format=output_format, timeout=timeout, extract_actions=extract_actions, cookies=cookies)
+            except Exception as fe:
                 raise ScraperError(
                     code=ErrorCode.INTERNAL_ERROR,
-                    message=f"Visual scraping failed and fallback also failed: {str(e)}",
-                    details={"url": url, "error_type": type(e).__name__, "mode": "visual"}
+                    message=f"Visual mode failed ({str(e)}) and fallback also failed: {str(fe)}",
+                    details={"url": url, "mode": "visual"}
                 )
+        finally:
+            # 【關鍵修復】無論成功失敗，強制關閉以釋放 Playwright 進程
+            if crawler:
+                try:
+                    await crawler.close()
+                    logger.debug("Crawl4AI crawler instance closed safely.")
+                except Exception as ce:
+                    logger.warning(f"Error during crawler closure: {ce}")
