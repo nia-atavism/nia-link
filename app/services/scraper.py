@@ -523,7 +523,7 @@ class ScraperService:
         """實際的抓取實作邏輯"""
         # 智能模式切換：針對特定高防禦或動態網域強制使用 VISUAL 模式
         target_mode = mode
-        dynamic_domains = ["x.com", "twitter.com", "threads.net", "facebook.com", "instagram.com"]
+        dynamic_domains = ["x.com", "twitter.com", "threads.net", "facebook.com", "instagram.com", "bilibili.com"]
         if any(domain in url.lower() for domain in dynamic_domains):
             if target_mode != ScrapeMode.VISUAL:
                 logger.info(f"🛡️ 偵測到動態目標 {url}，自動切換至 VISUAL 模式以穿透防禦。")
