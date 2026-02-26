@@ -177,17 +177,45 @@ async def api_info():
 
 @app.post("/v1/scrape", response_model=ScrapeResponse, tags=["Scraping"], summary="爬取網頁內容 (v0.2)")
 @limiter.limit("5/minute")
-async def scrape_url(request: Request, scrape_data: ScrapeRequest):
+async def scrape_url(request: Request, scrape_request: ScrapeRequest):
     start_time = time.time()
     scraper = ScraperService()
     stats = StatsService()
-    result = await scraper.scrape(url=str(scrape_data.url), output_format=scrape_data.format, mode=scrape_data.mode, wait_for_selector=scrape_data.wait_for_selector, timeout=scrape_data.timeout, extract_actions=scrape_data.extract_actions, cookies=scrape_data.cookies, screenshot=scrape_data.screenshot)
+    # 使用正確的 Pydantic 模型物件屬性
+    result = await scraper.scrape(
+        url=str(scrape_request.url), 
+        output_format=scrape_request.format, 
+        mode=scrape_request.mode, 
+        wait_for_selector=scrape_request.wait_for_selector, 
+        timeout=scrape_request.timeout, 
+        extract_actions=scrape_request.extract_actions, 
+        cookies=scrape_request.cookies, 
+        screenshot=scrape_request.screenshot
+    )
     process_time = round(time.time() - start_time, 3)
     stats.record_scrape(process_time)
     data = result['data']; cost = result['cost']
-    content_text = json.dumps(data['content'], ensure_ascii=False, indent=2) if scrape_data.format == OutputFormat.JSON else data['content']
+    content_text = json.dumps(data['content'], ensure_ascii=False, indent=2) if scrape_request.format == OutputFormat.JSON else data['content']
     actions = [ActionItem(type=ActionType(a['type']), label=a['label'], selector=a['selector'], importance=Importance(a.get('importance', 'medium')), value=a.get('value'), placeholder=a.get('placeholder'), options=a.get('options')) for a in data['actions']] if data.get('actions') else None
-    return ScrapeResponse(status="success", meta=MetaInfo(url=str(scrape_data.url), timestamp=datetime.now(timezone.utc), token_savings=f"{cost.get('reduction_percent', 0)}%", process_time=process_time, mode_used=result.get('mode_used', ScrapeMode.FAST)), content=ContentInfo(title=data.get('title') or 'Untitled', markdown=content_text, raw_text_length=cost.get('original_size', 0), description=data.get('metadata', {}).get('description'), links=data.get('links')), actions=actions, screenshot_base64=result.get('screenshot_base64'))
+    return ScrapeResponse(
+        status="success", 
+        meta=MetaInfo(
+            url=str(scrape_request.url), 
+            timestamp=datetime.now(timezone.utc), 
+            token_savings=f"{cost.get('reduction_percent', 0)}%", 
+            process_time=process_time, 
+            mode_used=result.get('mode_used', ScrapeMode.FAST)
+        ), 
+        content=ContentInfo(
+            title=data.get('title') or 'Untitled', 
+            markdown=content_text, 
+            raw_text_length=cost.get('original_size', 0), 
+            description=data.get('metadata', {}).get('description'), 
+            links=data.get('links')
+        ), 
+        actions=actions, 
+        screenshot_base64=result.get('screenshot_base64')
+    )
 
 @app.post("/v1/interact", response_model=InteractResponse, tags=["v0.9 Synaptic Bridge"], summary="擬人化網頁交互 (v0.9)")
 async def interact_url(request: InteractRequest, api_key: str = Depends(check_rate_limit)):
