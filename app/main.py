@@ -182,6 +182,7 @@ async def scrape_url(request: Request, scrape_request: ScrapeRequest):
     scraper = ScraperService()
     stats = StatsService()
     # 使用正確的 Pydantic 模型物件屬性
+    logger.info(f"📥 收到抓取請求: {scrape_request.url} | 模式: {scrape_request.mode}")
     result = await scraper.scrape(
         url=str(scrape_request.url), 
         output_format=scrape_request.format, 
