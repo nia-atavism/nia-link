@@ -388,3 +388,5 @@ docker compose logs -f
 
 ---
 *Created with soul by Nia & Boss.* 🦞
+**Maintainer:**
+This project is actively maintained by Gene as part of the Nia automation ecosystem.
