@@ -386,6 +386,58 @@ docker compose logs -f
 - [x] **v0.8**: **神經擴展** — Diff 服務、非同步佇列、速率限制、代理池輪換、53 個自動化測試
 - [x] **v0.9**: 提交至 Smithery.ai 與 Glama 生態圈、計費/用量限制
 
+# 🔗 Nia-Link: The Sensory Nervous System for AI Agents
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/nia-atavism/nia-link)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**Nia-Link** 是一個專為大語言模型（LLM）打造的 MCP (Model Context Protocol) 伺服器。它能賦予如 Claude Opus 4.7 或 GPT-5.4 等頂尖 AI Agent 強大的網頁導航、視覺感知與反爬蟲突破能力。
+
+## 🚀 快速部署 (Railway One-Click)
+
+我們建議使用 **Railway** 進行部署，以獲得最穩定的運行環境與極簡的 DevOps 體驗。
+
+1. **一鍵部署**：點擊上方「Deploy on Railway」按鈕。
+2. **配置變數**：在部署頁面填入你的 Oxylabs 認證資訊（見下方說明）。
+3. **完成連接**：將產出的 URL 填入你的 AI Agent 配置中。
+
+> **為什麼選擇 Railway？**
+> 現代架構師應專注於 AI 邏輯而非管理伺服器。關於 Railway 的深度架構優勢，請參閱我的分析文章：[放下你的 SSH 與 Nginx：為什麼現代架構師都把基礎設施交給 Railway](https://medium.com/@geneyu0317/%E6%94%BE%E4%B8%8B%E4%BD%A0%E7%9A%84-ssh-%E8%88%87-nginx-%E7%82%BA%E4%BB%80%E9%BA%BC%E7%8F%BE%E4%BB%A3%E6%9E%B6%E6%A7%8B%E5%B8%AB%E9%83%BD%E6%8A%8A%E5%9F%BA%E7%A4%8E%E8%A8%AD%E6%96%BD%E4%BA%A4%E7%B5%A6-railway-f0b1da756175)。
+
+---
+
+## 🛠️ 環境變數配置 (Environment Variables)
+
+為了確保 Nia-Link 能無視 Cloudflare 或驗證碼阻擋，本專案原生整合了 **Oxylabs Web Unblocker** 技術。
+
+| 變數名稱 | 說明 | 獲取方式 |
+| :--- | :--- | :--- |
+| `OXYLABS_USER` | 你的 Oxylabs 用戶名 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158) |
+| `OXYLABS_PASS` | 你的 Oxylabs 密碼 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158) |
+
+---
+
+## 📚 技術深度導讀 (Technical Insights)
+
+Nia-Link 不僅僅是代碼，它代表了一種全新的 **Agent-First** 資料獲取哲學。如果你想深入了解底層原理，推薦閱讀以下技術專欄：
+
+### 1. 突破 AI 的感知瓶頸
+探討為何傳統的 Playwright 腳本在 2026 年已不再適用，以及如何透過 API-First 節省高昂的 Token 成本。
+👉 [終結 API Token 燃燒爐：AI Agent 突破反爬蟲系統的最佳實踐](https://medium.com/@geneyu0317/%E7%B5%82%E7%B5%90-api-token-%E7%87%83%E7%87%92%E7%88%90-ai-agent-%E7%AA%81%E7%A0%B4%E5%8F%8D%E7%88%AC%E8%9F%B2%E7%B3%BB%E7%B5%B1%E7%9A%84%E6%9C%80%E4%BD%B3%E5%AF%A6%E8%B8%90-f283bf8f1cbb)
+
+### 2. 現代化部署策略
+分析一人公司如何利用雲端基礎設施實現 99.9% 的系統穩定度，同時將維護成本降至最低。
+👉 [放下你的 SSH 與 Nginx：現代架構師的減法藝術](https://medium.com/@geneyu0317/%E6%94%BE%E4%B8%8B%E4%BD%A0%E7%9A%84-ssh-%E8%88%87-nginx-%E7%82%BA%E4%BB%80%E9%BA%BC%E7%8F%BE%E4%BB%A3%E6%9E%B6%E6%A7%8B%E5%B8%AB%E9%83%BD%E6%8A%8A%E5%9F%BA%E7%A4%8E%E8%A8%AD%E6%96%BD%E4%BA%A4%E7%B5%A6-railway-f0b1da756175)
+
+---
+
+## 🤝 貢獻與支持
+
+如果你發現 Nia-Link 幫助你的 AI Agent 看見了更廣闊的世界，請給予我們一顆 ⭐ **Star** 支持！
+
+---
+**Powered by:** Oxylabs & Railway
+
 ---
 *Created with soul by Nia & Boss.* 🦞
 **Maintainer:**
