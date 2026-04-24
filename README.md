@@ -412,8 +412,8 @@ docker compose logs -f
 
 | 變數名稱 | 說明 | 獲取方式 |
 | :--- | :--- | :--- |
-| `OXYLABS_USER` | 你的 Oxylabs 用戶名 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158) |
-| `OXYLABS_PASS` | 你的 Oxylabs 密碼 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158) |
+| `OXYLABS_USER` | 你的 Oxylabs 用戶名 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158&url_id=137) |
+| `OXYLABS_PASS` | 你的 Oxylabs 密碼 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158&url_id=137) |
 
 ---
 
