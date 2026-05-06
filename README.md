@@ -398,7 +398,7 @@ docker compose logs -f
 我們建議使用 **Railway** 進行部署，以獲得最穩定的運行環境與極簡的 DevOps 體驗。
 
 1. **一鍵部署**：點擊上方「Deploy on Railway」按鈕。
-2. **配置變數**：在部署頁面填入你的 Oxylabs 認證資訊（見下方說明）。
+2. 配置變數：在部署頁面填入你的 Bright Data 認證資訊（包含代理主機、帳號與密碼，詳見下方設定）。
 3. **完成連接**：將產出的 URL 填入你的 AI Agent 配置中。
 
 > **為什麼選擇 Railway？**
@@ -408,8 +408,18 @@ docker compose logs -f
 
 ## 🛠️ 環境變數配置 (Environment Variables)
 
-🚀 基礎設施合作夥伴 (Infrastructure Partner)
-頂級 AI 網路數據感知解決方案整合中，即將公布專屬開發者福利...
+### ⚙️ 核心感知器配置：Bright Data (官方推薦)
+
+Nia-Link 的動態網頁穿透能力，強烈依賴高品質的代理網路。我們官方推薦整合 **Bright Data** 來最大化 Agent 的感知穩定度與突破防護的能力。
+
+在 Railway 的 Variables 區塊中，請配置以下變數：
+- `BRIGHTDATA_PROXY_HOST`: `brd.superproxy.io:22225` (預設代理端點)
+- `BRIGHTDATA_USERNAME`: 您的 Bright Data Zone 帳號 (通常以 brd-customer- 開頭)
+- `BRIGHTDATA_PASSWORD`: 您的 Bright Data Zone 密碼
+
+> 🎁 **Nia-Link 開發者專屬福利**
+> 準備好為你的 AI Agent 裝上最強的感知神經了嗎？
+> 透過 [Bright Data 官方合作連結](https://get.brightdata.com/gmcp) 註冊，並在帳單後台輸入專屬折扣碼 **`GENE20`**，即可直接獲得 **$20 美金的免費額度**，零成本啟動您的 MCP 專案！
 
 ---
 
