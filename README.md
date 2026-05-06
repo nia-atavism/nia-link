@@ -408,12 +408,8 @@ docker compose logs -f
 
 ## 🛠️ 環境變數配置 (Environment Variables)
 
-為了確保 Nia-Link 能無視 Cloudflare 或驗證碼阻擋，本專案原生整合了 **Oxylabs Web Unblocker** 技術。
-
-| 變數名稱 | 說明 | 獲取方式 |
-| :--- | :--- | :--- |
-| `OXYLABS_USER` | 你的 Oxylabs 用戶名 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158&url_id=137) |
-| `OXYLABS_PASS` | 你的 Oxylabs 密碼 | [點此註冊獲取免費測試額度](https://oxylabs.go2cloud.org/aff_c?offer_id=7&aff_id=2158&url_id=137) |
+🚀 基礎設施合作夥伴 (Infrastructure Partner)
+頂級 AI 網路數據感知解決方案整合中，即將公布專屬開發者福利...
 
 ---
 
